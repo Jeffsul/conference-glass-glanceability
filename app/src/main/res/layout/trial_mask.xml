@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <RelativeLayout
+        android:id="@+id/body_layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="@dimen/glass_card_margin"
+        android:layout_marginTop="@dimen/glass_card_margin"
+        android:layout_marginRight="@dimen/glass_card_margin"
+        android:layout_marginBottom="@dimen/glass_card_footer_margin">
+
+        <ImageView
+            android:id="@+id/mask_holder"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent" />
+
+    </RelativeLayout>
+
+</FrameLayout>
