@@ -3,8 +3,10 @@ package com.syde461.group6.glanceability;
 import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -26,25 +28,72 @@ public class MainActivity extends Activity {
     private static final String SEND_ACTIVATION_ACTION = "web/activate";
     private static final String SEND_RESULT_ACTION = "web/continue";
 
+    private static final long MASK_DURATION = 200;
+
+    private static final String RANDOM_CHARS = "<>+-=|^";
+    private static final int NONWORD_LENGTH = 8;
+
     private enum Question {
         PRIMARY, SECONDARY, TERTIARY, IMAGE, DONE
     }
 
-    private ImageView maskHolder;
+    private Handler handler;
+
+    private TextView primaryTextView;
+    private TextView secondaryTextView;
+    private TextView tertiaryTextView;
+    private ImageView imageView;
+
+    private long displayTimestamp;
 
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
 
-        sendActivation();
-
         setContentView(R.layout.trial_mask);
-        maskHolder = (ImageView) findViewById(R.id.mask_holder);
+        primaryTextView = (TextView) findViewById(R.id.user_name);
+        secondaryTextView = (TextView) findViewById(R.id.user_employer);
+        tertiaryTextView = (TextView) findViewById(R.id.user_position);
+        imageView = (ImageView) findViewById(R.id.user_profile);
+
+        // For posting delayed requests:
+        handler = new Handler();
+
+        showMask();
+
+        sendActivation();
     }
 
-    private void setupTrial(Question question, long duration, String primaryWord,
-                            String secondaryWord, String tertiaryWord, String imageUrl) {
+    private void showMask() {
+        showLayout(makeNonWord(), makeNonWord(), makeNonWord(), null);
+    }
 
+    private void showLayout(String primaryWord, String secondaryWord, String tertiaryWord, String imageUrl) {
+        primaryTextView.setText(primaryWord);
+        secondaryTextView.setText(secondaryWord);
+        tertiaryTextView.setText(tertiaryWord);
+        if (imageUrl == null || imageUrl.trim().length() == 0) {
+            // Display blank default image.
+        }
+    }
+
+    private void setupTrial(Question question, final long duration, final String primaryWord,
+            final String secondaryWord, final String tertiaryWord, final String imageUrl) {
+        showMask();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                showLayout(primaryWord, secondaryWord, tertiaryWord, imageUrl);
+                displayTimestamp = System.currentTimeMillis();
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        showMask();
+                        sendResult();
+                    }
+                }, duration);
+            }
+        }, MASK_DURATION);
     }
 
     /** Send activation request to the server. */
@@ -53,10 +102,13 @@ public class MainActivity extends Activity {
     }
 
     /** Passes stimulus timestamp back to server. */
-    private void sendResult() throws JSONException {
-        long timestamp = System.currentTimeMillis();
+    private void sendResult() {
         JSONObject data = new JSONObject();
-        data.put("display_timestamp", timestamp);
+        try {
+            data.put("display_timestamp", displayTimestamp);
+        } catch (JSONException e) {
+            Log.e(TAG, "JSON Error sending result.", e);
+        }
         new ServerTask(data).execute(API_PATH + SEND_RESULT_ACTION);
     }
 
@@ -132,5 +184,14 @@ public class MainActivity extends Activity {
             }
         }
         return Question.DONE;
+    }
+
+    /** Utility method to generate random nonword of NONWORD_LENGTH from RANDOM_CHARS. */
+    private static String makeNonWord() {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < NONWORD_LENGTH; i++) {
+            sb.append(RANDOM_CHARS.charAt((int)(Math.random() * RANDOM_CHARS.length())));
+        }
+        return sb.toString();
     }
 }
