@@ -3,10 +3,17 @@ package com.syde461.group6.glanceability;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -29,7 +36,8 @@ import java.net.URL;
 public class MainActivity extends Activity {
     private static final String TAG = "glass-conference-glanceability";
 
-    private static final boolean TEST_MODE = true;
+    private static final boolean TEST_MODE = false;
+    private static final Layout TEST_LAYOUT = Layout.DYNAMIC;
 
     private static final String API_PATH = "http://conference-glass.herokuapp.com/";
     private static final String SEND_ACTIVATION_ACTION = "web/activate";
@@ -51,6 +59,9 @@ public class MainActivity extends Activity {
     private Layout layoutType;
 
     private Handler handler;
+
+    private View bodyLayout;
+    private View fixationRect;
 
     private TextView primaryTextView;
     private TextView secondaryTextView;
@@ -74,11 +85,8 @@ public class MainActivity extends Activity {
         sendActivation();
     }
 
-    private void updateLayoutType() {
-        if (layoutType == null) {
-            Log.e(TAG, "Layout type not set.");
-            return;
-        }
+    private void setLayoutType(Layout layoutType) {
+        this.layoutType = layoutType;
         int layoutRes;
         switch (layoutType) {
             case STATIC:
@@ -88,14 +96,23 @@ public class MainActivity extends Activity {
                 layoutRes = R.layout.trial_mask_dynamic;
                 break;
             default:
-                Log.e(TAG, "Layout type not set.");
+                Log.e(TAG, "Layout type is null.");
                 return;
         }
         setContentView(layoutRes);
+
         primaryTextView = (TextView) findViewById(R.id.user_name);
         secondaryTextView = (TextView) findViewById(R.id.user_employer);
         tertiaryTextView = (TextView) findViewById(R.id.user_position);
         imageView = (ImageView) findViewById(R.id.user_profile);
+
+        bodyLayout = findViewById(R.id.body_layout);
+        fixationRect = findViewById(R.id.fixation_rect);
+    }
+
+    private void showFixationRect() {
+        bodyLayout.setVisibility(View.INVISIBLE);
+        fixationRect.setVisibility(View.VISIBLE);
     }
 
     private void showMask() {
@@ -103,6 +120,9 @@ public class MainActivity extends Activity {
     }
 
     private void showLayout(String primaryWord, String secondaryWord, String tertiaryWord, Bitmap image) {
+        bodyLayout.setVisibility(View.VISIBLE);
+        fixationRect.setVisibility(View.INVISIBLE);
+
         primaryTextView.setText(primaryWord);
         secondaryTextView.setText(secondaryWord);
         tertiaryTextView.setText(tertiaryWord);
@@ -113,7 +133,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void setupTrial(Question question, final long duration, final String primaryWord,
+    private void setupTrial(final long duration, final String primaryWord,
             final String secondaryWord, final String tertiaryWord, final Bitmap image) {
         showMask();
         handler.postDelayed(new Runnable() {
@@ -126,6 +146,12 @@ public class MainActivity extends Activity {
                     public void run() {
                         showMask();
                         sendResult();
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                showFixationRect();
+                            }
+                        }, MASK_DURATION);
                     }
                 }, duration);
             }
@@ -135,9 +161,8 @@ public class MainActivity extends Activity {
     /** Send activation request to the server. */
     private void sendActivation() {
         if (TEST_MODE) {
-            layoutType = Layout.STATIC;
-            updateLayoutType();
-            setupTrial(Question.PRIMARY, 10000, "Jeffrey Sullivan", "Google", "Developer", null);
+            setLayoutType(TEST_LAYOUT);
+            setupTrial(10000, "Jeffrey Sullivan", "Google", "Developer", null);
             return;
         }
         new ServerTask().execute(API_PATH + SEND_ACTIVATION_ACTION);
@@ -209,12 +234,13 @@ public class MainActivity extends Activity {
                 }
 
                 if (layoutType == null) {
-                    if (resp.getString("layout_type").equals(Layout.DYNAMIC.toString())) {
-                        layoutType = Layout.DYNAMIC;
+                    Layout newLayoutType;
+                    if (resp.getString("display_type").equals(Layout.DYNAMIC.toString())) {
+                        newLayoutType = Layout.DYNAMIC;
                     } else {
-                        layoutType = Layout.STATIC;
+                        newLayoutType = Layout.STATIC;
                     }
-                    updateLayoutType();
+                    setLayoutType(newLayoutType);
                 }
 
                 long duration = resp.getLong("duration");
@@ -222,20 +248,47 @@ public class MainActivity extends Activity {
                 String secondaryWord = resp.getString("secondary_word");
                 String tertiaryWord = resp.getString("tertiary_word");
                 String imageUrl = resp.getString("image_url");
-                Bitmap bmp = null;
-                try {
-                    URL url = new URL(imageUrl);
-                    bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
-                } catch (MalformedURLException e) {
-                    Log.e(TAG, "Error loading image.", e);
-                } catch (IOException e) {
-                    Log.e(TAG, "Error loading image.", e);
-                }
 
-                setupTrial(question, duration, primaryWord, secondaryWord, tertiaryWord, bmp);
+                new DownloadImageTask(duration, primaryWord, secondaryWord, tertiaryWord).execute(imageUrl);
             } catch (JSONException e) {
                 Log.e(TAG, "Error parsing JSON response.", e);
             }
+        }
+    }
+
+    private class DownloadImageTask extends AsyncTask<String, String, Bitmap> {
+        private final long duration;
+        private final String primaryWord;
+        private final String secondaryWord;
+        private final String tertiaryWord;
+
+        public DownloadImageTask(long duration, String primaryWord, String secondaryWord, String tertiaryWord) {
+            this.duration = duration;
+            this.primaryWord = primaryWord;
+            this.secondaryWord = secondaryWord;
+            this.tertiaryWord = tertiaryWord;
+        }
+
+        @Override
+        protected Bitmap doInBackground(String... imageUrl) {
+            Bitmap bmp = null;
+            try {
+                URL url = new URL(imageUrl[0]);
+                bmp = BitmapFactory.decodeStream(url.openConnection().getInputStream());
+            } catch (MalformedURLException e) {
+                Log.e(TAG, "Error loading image.", e);
+            } catch (IOException e) {
+                Log.e(TAG, "Error loading image.", e);
+            }
+            if (layoutType == Layout.DYNAMIC) {
+                bmp = getRoundedCornerBitmap(bmp);
+            }
+            return bmp;
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap result) {
+            setupTrial(duration, primaryWord, secondaryWord, tertiaryWord, result);
         }
     }
 
@@ -267,5 +320,26 @@ public class MainActivity extends Activity {
             default:
                 return R.drawable.blank_box;
         }
+    }
+
+    /** Credit: http://stackoverflow.com/questions/2459916/how-to-make-an-imageview-with-rounded-corners */
+    public static Bitmap getRoundedCornerBitmap(Bitmap bitmap) {
+        Bitmap output = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(output);
+
+        final int color = 0xffffffff;
+        final Paint paint = new Paint();
+        final Rect rect = new Rect(0, 0, bitmap.getWidth(), bitmap.getHeight());
+        final RectF rectF = new RectF(rect);
+
+        paint.setAntiAlias(true);
+        canvas.drawARGB(0, 0, 0, 0);
+        paint.setColor(color);
+        canvas.drawOval(rectF, paint);
+
+        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+        canvas.drawBitmap(bitmap, rect, rect, paint);
+
+        return output;
     }
 }

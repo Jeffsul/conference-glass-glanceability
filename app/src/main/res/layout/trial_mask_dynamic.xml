@@ -14,6 +14,7 @@
         android:layout_marginTop="@dimen/glass_card_margin"
         android:layout_marginRight="@dimen/glass_card_margin"
         android:layout_marginBottom="@dimen/glass_card_margin"
+        android:visibility="invisible"
         tools:ignore="UselessLeaf"
         >
 
@@ -22,19 +23,20 @@
             android:layout_height="fill_parent"
             android:orientation="vertical">
             <ImageView
+                android:id="@+id/user_profile"
                 android:layout_width="170px"
                 android:layout_height="170px"
                 android:layout_marginTop="5px"
                 android:layout_marginBottom="5px"
                 android:layout_gravity="center_horizontal"
+                android:padding="3dp"
                 android:background="@drawable/circle_border"/>
             <TextView
                 android:id="@+id/user_name"
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
-                android:textSize="32px"
-                android:text="TEST" />
+                android:textSize="32px" />
             <LinearLayout
                 android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
@@ -46,8 +48,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
-                    android:textSize="36px"
-                    android:text="EMPLOYER" />
+                    android:textSize="36px" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -59,10 +60,23 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:gravity="center_horizontal"
-                    android:textSize="36px"
-                    android:text="POSITION" />
+                    android:textSize="36px" />
                 </LinearLayout>
         </LinearLayout>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/fixation_rect"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="@dimen/fixation_rect_margin"
+        android:layout_marginTop="@dimen/fixation_rect_margin"
+        android:layout_marginRight="@dimen/fixation_rect_margin"
+        android:layout_marginBottom="@dimen/fixation_rect_margin"
+        android:background="@drawable/border"
+        tools:ignore="UselessLeaf"
+        >
 
     </RelativeLayout>
 
