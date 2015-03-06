@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
     private static final String SEND_RESULT_ACTION = "web/continue";
 
     private static final long MASK_DURATION = 200;
+    private static final long FIXATION_DURATION = 1000;
 
     private static final String RANDOM_CHARS = "<>+-=|^";
     private static final int NONWORD_LENGTH = 8;
@@ -127,6 +128,11 @@ public class MainActivity extends Activity {
         fixationRect.setVisibility(View.VISIBLE);
     }
 
+    private void showBlankScreen() {
+        bodyLayout.setVisibility(View.INVISIBLE);
+        fixationRect.setVisibility(View.INVISIBLE);
+    }
+
     private void showMask() {
         displayBodyLayout(makeNonWord(), makeNonWord(), makeNonWord(), null);
     }
@@ -182,27 +188,33 @@ public class MainActivity extends Activity {
 
     private void setupTrial(final long duration, final String primaryWord,
             final String secondaryWord, final String tertiaryWord, final Bitmap image) {
-        showMask();
+        showFixationRect();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                showLayout(primaryWord, secondaryWord, tertiaryWord, image);
-                displayTimestamp = System.currentTimeMillis();
+                showMask();
                 handler.postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        showMask();
-                        sendResult();
+                        showLayout(primaryWord, secondaryWord, tertiaryWord, image);
+                        displayTimestamp = System.currentTimeMillis();
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                showFixationRect();
+                                showMask();
+                                sendResult();
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        showBlankScreen();
+                                    }
+                                }, MASK_DURATION);
                             }
-                        }, MASK_DURATION);
+                        }, duration);
                     }
-                }, duration);
+                }, MASK_DURATION);
             }
-        }, MASK_DURATION);
+        }, FIXATION_DURATION);
     }
 
     /** Send activation request to the server. */
