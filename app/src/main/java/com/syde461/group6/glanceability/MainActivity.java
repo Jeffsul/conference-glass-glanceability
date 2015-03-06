@@ -16,6 +16,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import org.apache.http.HttpResponse;
@@ -56,11 +57,21 @@ public class MainActivity extends Activity {
         STATIC, DYNAMIC
     }
 
+    private static final int[] FLOATING_HEADS = {
+            R.drawable.profile_anson, R.drawable.profile_catherine, R.drawable.profile_jeff,
+            R.drawable.profile_eric, R.drawable.profile_kyle, R.drawable.profile_default,
+            R.drawable.f_1, R.drawable.f_2, R.drawable.f_3
+    };
+    private Bitmap[] floatingHeads;
+
+    private ImageView head1;
+    private ImageView head2;
+
     private Layout layoutType;
 
     private Handler handler;
 
-    private View bodyLayout;
+    private RelativeLayout bodyLayout;
     private View fixationRect;
 
     private TextView primaryTextView;
@@ -94,6 +105,7 @@ public class MainActivity extends Activity {
                 break;
             case DYNAMIC:
                 layoutRes = R.layout.trial_mask_dynamic;
+                initializeFloatingHeads();
                 break;
             default:
                 Log.e(TAG, "Layout type is null.");
@@ -106,7 +118,7 @@ public class MainActivity extends Activity {
         tertiaryTextView = (TextView) findViewById(R.id.user_position);
         imageView = (ImageView) findViewById(R.id.user_profile);
 
-        bodyLayout = findViewById(R.id.body_layout);
+        bodyLayout = (RelativeLayout) findViewById(R.id.body_layout);
         fixationRect = findViewById(R.id.fixation_rect);
     }
 
@@ -116,10 +128,19 @@ public class MainActivity extends Activity {
     }
 
     private void showMask() {
-        showLayout(makeNonWord(), makeNonWord(), makeNonWord(), null);
+        displayBodyLayout(makeNonWord(), makeNonWord(), makeNonWord(), null);
     }
 
-    private void showLayout(String primaryWord, String secondaryWord, String tertiaryWord, Bitmap image) {
+    private void displayBodyLayout(String primaryWord, String secondaryWord, String tertiaryWord, Bitmap image) {
+        if (head1 != null) {
+            bodyLayout.removeView(head1);
+            head1 = null;
+        }
+        if (head2 != null) {
+            bodyLayout.removeView(head2);
+            head2 = null;
+        }
+
         bodyLayout.setVisibility(View.VISIBLE);
         fixationRect.setVisibility(View.INVISIBLE);
 
@@ -130,6 +151,32 @@ public class MainActivity extends Activity {
             imageView.setImageResource(getBlankProfile(layoutType));
         } else {
             imageView.setImageBitmap(image);
+        }
+    }
+
+    private static final int MAX_LEFT_MG = 75;
+    private static final int MAX_TOP_MG = 60;
+
+    private void showLayout(String primaryWord, String secondaryWord, String tertiaryWord, Bitmap image) {
+        displayBodyLayout(primaryWord, secondaryWord, tertiaryWord, image);
+        if (layoutType == Layout.DYNAMIC) {
+            head1 = new ImageView(this);
+            Bitmap bmp = floatingHeads[(int)(Math.random()*floatingHeads.length)];
+            head1.setImageBitmap(bmp);
+            int size = (int) (110 + (Math.random() - 0.5) * 30);
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(size, size);
+            params.leftMargin = (int)(Math.random() * MAX_LEFT_MG);
+            params.topMargin = (int)(Math.random() * MAX_TOP_MG);
+            bodyLayout.addView(head1, 0, params);
+
+            head2 = new ImageView(this);
+            bmp = floatingHeads[(int)(Math.random()*floatingHeads.length)];
+            head2.setImageBitmap(bmp);
+            size = (int) (110 + (Math.random() - 0.5) * 30);
+            params = new RelativeLayout.LayoutParams(size, size);
+            params.leftMargin = 410 + (int)(Math.random() * 75);
+            params.topMargin = (int)(Math.random() * MAX_TOP_MG);
+            bodyLayout.addView(head2, 0, params);
         }
     }
 
@@ -319,6 +366,14 @@ public class MainActivity extends Activity {
             case STATIC:
             default:
                 return R.drawable.blank_box;
+        }
+    }
+
+    private void initializeFloatingHeads() {
+        floatingHeads = new Bitmap[FLOATING_HEADS.length];
+        for (int i = 0; i < floatingHeads.length; i++) {
+            Bitmap bmp = BitmapFactory.decodeResource(getResources(), FLOATING_HEADS[i]);
+            floatingHeads[i] = getRoundedCornerBitmap(bmp);
         }
     }
 

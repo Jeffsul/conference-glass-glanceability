@@ -7,13 +7,13 @@
     >
 
     <RelativeLayout
-        android:id="@+id/body_layout"
+        android:id="@+id/fixation_rect"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/glass_card_dynamic_body_height"
-        android:layout_marginLeft="@dimen/glass_card_margin"
-        android:layout_marginTop="@dimen/glass_card_margin"
-        android:layout_marginRight="@dimen/glass_card_margin"
-        android:layout_marginBottom="@dimen/glass_card_margin"
+        android:layout_height="match_parent"
+        android:layout_marginLeft="@dimen/fixation_rect_margin"
+        android:layout_marginTop="@dimen/fixation_rect_margin"
+        android:layout_marginRight="@dimen/fixation_rect_margin"
+        android:layout_marginBottom="@dimen/fixation_rect_margin"
         android:background="@drawable/border"
         tools:ignore="UselessLeaf"
         >
